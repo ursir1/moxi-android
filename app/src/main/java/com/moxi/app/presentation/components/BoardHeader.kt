@@ -40,8 +40,8 @@ fun BoardHeader(
         Text(
             text = "MOXI",
             color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Normal,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Black, letterSpacing = 2.sp,
         )
         Spacer(modifier = Modifier.weight(1f))
         Box(
@@ -59,5 +59,6 @@ fun BoardHeader(
         }
     }
 }
+
 
 

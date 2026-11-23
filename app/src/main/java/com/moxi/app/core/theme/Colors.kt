@@ -4,25 +4,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-/** Shared horizontal screen gutter so Home/Discover/Library/Search align to the same left edge. */
 val ScreenGutter = 16.dp
-
-/** Space reserved at the bottom of scrollable content so the last row clears the floating bottom bar. */
 val BottomBarSpace = 96.dp
 
-val StremioBackground = Color(0xFF050515)
-val SearchBackground = Color(0xFF292932)
-val CardFallback = Color(0xFF171724)
-val AccentPurple = Color(0xFFD4AF37)
-val MutedText = Color(0xFFB9B5C6)
-val GlassSurface = Color(0xB72A2935)
+val StremioBackground = Color(0xFF080D0A)
+val SearchBackground = Color(0xFF131D17)
+val CardFallback = Color(0xFF101814)
+val AccentPurple = Color(0xFF00E676) // Overriding Stremio purple with Moxi Emerald
+val MutedText = Color(0xFF94A89C)
+val GlassSurface = Color(0xCC111B15)
 
-/** Secondary accent used by the web client for primary "play" affordances. */
-val AccentGreen = Color(0xFF22B365)
+val AccentGreen = Color(0xFF00E676)
+val MoxiGold = Color(0xFFFFD700)
 
-/** stremio-web's root background: a 41° dark navy-to-purple diagonal gradient. */
-val StremioBackgroundBrush = Brush.linearGradient(
-    colors = listOf(Color(0xFF0C0B11), Color(0xFF0F1E17)),
+val StremioBackgroundBrush = Brush.verticalGradient(
+    colors = listOf(Color(0xFF070B09), Color(0xFF0C140F), Color(0xFF060907)),
 )
-
-
