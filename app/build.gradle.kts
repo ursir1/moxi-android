@@ -38,7 +38,7 @@ val posthogApiKey = (localProperties.getProperty("posthog.apiKey") ?: System.get
 val posthogHost = (localProperties.getProperty("posthog.host") ?: System.getenv("POSTHOG_HOST") ?: "https://us.i.posthog.com").trim()
 
 android {
-    namespace = "com.stremio.mobile"
+    namespace = "com.moxi.app"
     compileSdk = 37
     ndkVersion = "29.0.13846066"
 
@@ -50,7 +50,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.stremio.mobile"
+        applicationId = "com.moxi.app"
         minSdk = 24
         targetSdk = 37
         versionCode = stringPropertyOrEnv("VERSION_CODE")?.toIntOrNull() ?: 1

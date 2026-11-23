@@ -14,7 +14,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "StremioMobile"
+rootProject.name = "MoxiApp"
 include(":app")
 include(":mpv-android-lib")
 project(":mpv-android-lib").projectDir = file("third_party/mpv-android-lib/app")
