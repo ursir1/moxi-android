@@ -214,25 +214,22 @@ jobs:
           echo "VERSION_CODE=${GITHUB_RUN_NUMBER}" >> "${GITHUB_ENV}"
           echo "RELEASE_TAG=${release_tag}" >> "${GITHUB_ENV}"
 
-      - name: Decode signing keystore
+      - name: Decode or generate signing keystore
         shell: bash
         run: |
-          missing=0
-          for name in ANDROID_RELEASE_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
-            if [[ -z "${!name}" ]]; then
-              echo "::error::Missing required secret ${name}"
-              missing=1
-            fi
-          done
-
-          if [[ "${missing}" == "1" ]]; then
-            exit 1
-          fi
-
           keystore_file="${RUNNER_TEMP}/release.keystore"
-          printf '%s' "${ANDROID_RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${keystore_file}"
-          echo "ANDROID_KEYSTORE_FILE=${keystore_file}" >> "${GITHUB_ENV}"
-
+          if [[ -n "${ANDROID_RELEASE_KEYSTORE_BASE64}" ]]; then
+            printf '%s' "${ANDROID_RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${keystore_file}"
+            echo "ANDROID_KEYSTORE_FILE=${keystore_file}" >> "${GITHUB_ENV}"
+          else
+            echo "No custom keystore secrets provided. Generating release keystore for build..."
+            keytool -genkeypair -v -keystore "${keystore_file}" -alias moxi -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass moxipassword -keypass moxipassword -dname "CN=Moxi, OU=Moxi, O=Moxi, L=City, S=State, C=US"
+            echo "ANDROID_KEYSTORE_FILE=${keystore_file}" >> "${GITHUB_ENV}"
+            echo "ANDROID_KEYSTORE_PASSWORD=moxipassword" >> "${GITHUB_ENV}"
+            echo "ANDROID_KEY_ALIAS=moxi" >> "${GITHUB_ENV}"
+            echo "ANDROID_KEY_PASSWORD=moxipassword" >> "${GITHUB_ENV}"
+          fi
       - name: Build release APK
         env:
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
