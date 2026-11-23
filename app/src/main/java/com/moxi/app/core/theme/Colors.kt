@@ -13,7 +13,7 @@ val BottomBarSpace = 96.dp
 val StremioBackground = Color(0xFF050515)
 val SearchBackground = Color(0xFF292932)
 val CardFallback = Color(0xFF171724)
-val AccentPurple = Color(0xFF7457F2)
+val AccentPurple = Color(0xFFD4AF37)
 val MutedText = Color(0xFFB9B5C6)
 val GlassSurface = Color(0xB72A2935)
 
@@ -22,6 +22,7 @@ val AccentGreen = Color(0xFF22B365)
 
 /** stremio-web's root background: a 41° dark navy-to-purple diagonal gradient. */
 val StremioBackgroundBrush = Brush.linearGradient(
-    colors = listOf(Color(0xFF0C0B11), Color(0xFF1A173E)),
+    colors = listOf(Color(0xFF0C0B11), Color(0xFF0F1E17)),
 )
+
 

@@ -10,7 +10,8 @@
 
     <style name="Theme.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_moxi_splash_logo</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_moxi_logo</item>
         <item name="postSplashScreenTheme">@style/Theme.MoxiApp</item>
     </style>
 </resources>
+

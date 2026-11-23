@@ -26,7 +26,7 @@ import com.moxi.app.core.theme.ScreenGutter
 @Composable
 fun StremioMark(modifier: Modifier = Modifier) {
     Image(
-        painter = painterResource(id = com.moxi.app.R.drawable.ic_moxi_splash_logo),
+        painter = painterResource(id = com.moxi.app.R.drawable.ic_moxi_logo),
         contentDescription = null,
         modifier = modifier,
     )
@@ -84,5 +84,6 @@ fun GlassPill(text: String) {
         )
     }
 }
+
 
 

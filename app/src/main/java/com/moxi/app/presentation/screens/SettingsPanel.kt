@@ -99,7 +99,7 @@ fun SettingsPanel(
                     )
                     Column {
                         Text(
-                            text = email ?: "Stremio Account",
+                            text = email ?: "Moxi Account",
                             color = Color.White,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
@@ -501,4 +501,5 @@ fun SettingsClickRow(
         }
     }
 }
+
 

@@ -86,7 +86,7 @@ fun InfoSettingsScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                ServerDetailRow(label = "Stremio Mobile Client", value = BuildConfig.VERSION_NAME)
+                ServerDetailRow(label = "Moxi Mobile", value = BuildConfig.VERSION_NAME)
                 ServerDetailRow(label = "Streaming Server Version", value = serverVersion)
                 ServerDetailRow(label = "Database Config Path", value = serverConfigPath)
                 ServerDetailRow(label = "Server Cache Directory", value = serverCachePath)
@@ -314,4 +314,5 @@ private fun ServerDetailRow(label: String, value: String) {
         )
     }
 }
+
 

@@ -38,7 +38,7 @@ fun BoardHeader(
         )
         Spacer(modifier = Modifier.width(10.dp))
         Text(
-            text = "STREMIO",
+            text = "MOXI",
             color = Color.White,
             fontSize = 20.sp,
             fontWeight = FontWeight.Normal,
@@ -59,4 +59,5 @@ fun BoardHeader(
         }
     }
 }
+
 

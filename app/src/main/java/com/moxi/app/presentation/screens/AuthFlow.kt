@@ -188,7 +188,7 @@ private fun IntroScreen(
             ) {
                 StremioMark(modifier = Modifier.size(58.dp))
                 Text(
-                    text = "stremio",
+                    text = "moxi",
                     color = Color.White,
                     fontSize = 38.sp,
                     fontWeight = FontWeight.Normal,
@@ -541,4 +541,5 @@ private fun TextLink(
         fontWeight = FontWeight.Bold,
     )
 }
+
 
