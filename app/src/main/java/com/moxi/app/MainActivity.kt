@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -20,6 +21,12 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.moxi.app.server.JniStreamingServerController
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import timber.log.Timber
 
 class MainActivity : ComponentActivity() {
 
@@ -27,6 +34,7 @@ class MainActivity : ComponentActivity() {
     private var customView: View? = null
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
     private lateinit var fullscreenContainer: FrameLayout
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     companion object {
         const val MOXI_WEB_URL = "https://moxi-5n1.pages.dev/"
@@ -37,7 +45,9 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // Immersive Edge-to-Edge display
+        // Boot the native streaming server in background
+        startLocalStreamingServer()
+
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val rootLayout = FrameLayout(this).apply {
@@ -79,6 +89,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun startLocalStreamingServer() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val app = application as MainApplication
+                Timber.d("Starting native streaming server...")
+                app.container.serverController.start()
+                Timber.d("Native streaming server start called successfully")
+            } catch (e: Exception) {
+                Timber.e(e, "Error starting native streaming server")
+            }
+        }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun configureWebView() {
         val settings = webView.settings
@@ -98,20 +121,17 @@ class MainActivity : ComponentActivity() {
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
 
-        // Custom User-Agent so Moxi web app recognizes Android client
         val defaultUserAgent = settings.userAgentString
         settings.userAgentString = "$defaultUserAgent MoxiAndroid/${BuildConfig.VERSION_NAME}"
 
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
-                // Keep inside Moxi web app or internal streaming links
                 if (url.startsWith("https://moxi-5n1.pages.dev") || 
                     url.startsWith("http://127.0.0.1") || 
                     url.startsWith("http://localhost")) {
                     return false
                 }
-                // External links open in device browser or external app (e.g. magnet)
                 return try {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                     startActivity(intent)
@@ -120,13 +140,16 @@ class MainActivity : ComponentActivity() {
                     false
                 }
             }
-
-            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                super.onPageStarted(view, url, favicon)
-            }
         }
 
         webView.webChromeClient = object : WebChromeClient() {
+            override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
+                consoleMessage?.let {
+                    Timber.tag("MoxiWeb").d("${it.message()} -- From line ${it.lineNumber()} of ${it.sourceId()}")
+                }
+                return true
+            }
+
             override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
                 if (customView != null) {
                     onHideCustomView()
