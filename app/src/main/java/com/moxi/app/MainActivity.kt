@@ -21,7 +21,6 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.moxi.app.server.JniStreamingServerController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -45,8 +44,8 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // Boot the native streaming server in background
-        startLocalStreamingServer()
+        // Safely launch background streaming server so crashes never kill the UI
+        startLocalStreamingServerSafely()
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -89,15 +88,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun startLocalStreamingServer() {
+    private fun startLocalStreamingServerSafely() {
         scope.launch(Dispatchers.IO) {
             try {
-                val app = application as MainApplication
+                val app = application as? MainApplication ?: return@launch
                 Timber.d("Starting native streaming server...")
                 app.container.serverController.start()
-                Timber.d("Native streaming server start called successfully")
-            } catch (e: Exception) {
-                Timber.e(e, "Error starting native streaming server")
+                Timber.d("Native streaming server started successfully")
+            } catch (t: Throwable) {
+                // Catch all errors (including UnsatisfiedLinkError, NoClassDefFoundError)
+                Timber.e(t, "Non-fatal: could not start streaming server in background")
             }
         }
     }
