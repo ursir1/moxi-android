@@ -36,7 +36,25 @@ class MainActivity : ComponentActivity() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     companion object {
-        const val MOXI_WEB_URL = "https://moxi-5n1.pages.dev/"
+        const val MOXI_WEB_URL = "https://moxi-5n1.pages.dev/#/?streamingServerUrl=http%3A%2F%2F127.0.0.1%3A11470%2F"
+    }
+
+    inner class AndroidBridge {
+        @android.webkit.JavascriptInterface
+        fun playInExternalPlayer(streamUrl: String) {
+            runOnUiThread {
+                try {
+                    val cleanUrl = streamUrl.trim().removePrefix("vlc://")
+                    val videoIntent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(Uri.parse(cleanUrl), "video/*")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(Intent.createChooser(videoIntent, "Play video with..."))
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to launch external player for: $streamUrl")
+                }
+            }
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -124,21 +142,82 @@ class MainActivity : ComponentActivity() {
         val defaultUserAgent = settings.userAgentString
         settings.userAgentString = "$defaultUserAgent MoxiAndroid/${BuildConfig.VERSION_NAME}"
 
+        webView.addJavascriptInterface(AndroidBridge(), "AndroidBridge")
+
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
+                val uri = request.url
+                val scheme = uri.scheme?.lowercase() ?: ""
+
+                // Handle external player schemes: vlc, intent, market, etc.
+                if (scheme == "vlc" || scheme == "intent" || scheme == "market") {
+                    return try {
+                        val intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
+                        startActivity(intent)
+                        true
+                    } catch (e: Exception) {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, uri)
+                            startActivity(intent)
+                            true
+                        } catch (t: Throwable) {
+                            false
+                        }
+                    }
+                }
+
+                // If user clicks a direct media/playlist file intended for an external player
+                if (url.endsWith(".m3u8") || url.endsWith(".mkv") || url.endsWith(".mp4") || url.contains("/playback/")) {
+                    return try {
+                        val videoIntent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(Uri.parse(url), "video/*")
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(Intent.createChooser(videoIntent, "Play video with..."))
+                        true
+                    } catch (e: Exception) {
+                        false
+                    }
+                }
+
                 if (url.startsWith("https://moxi-5n1.pages.dev") || 
                     url.startsWith("http://127.0.0.1") || 
                     url.startsWith("http://localhost")) {
                     return false
                 }
                 return try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    val intent = Intent(Intent.ACTION_VIEW, uri)
                     startActivity(intent)
                     true
                 } catch (e: Exception) {
                     false
                 }
+            }
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                // Inject helper to automatically connect external player buttons to AndroidBridge
+                val js = """
+                    (function() {
+                        if (window.__moxiInjected) return;
+                        window.__moxiInjected = true;
+                        document.addEventListener('click', function(e) {
+                            var target = e.target;
+                            var btn = target.closest('a, button, [role="button"]');
+                            if (!btn) return;
+                            var href = btn.getAttribute('href') || '';
+                            if (href.startsWith('vlc://') || href.includes('/playlist') || href.endsWith('.m3u8')) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (window.AndroidBridge && window.AndroidBridge.playInExternalPlayer) {
+                                    window.AndroidBridge.playInExternalPlayer(href);
+                                }
+                            }
+                        }, true);
+                    })();
+                """.trimIndent()
+                view?.evaluateJavascript(js, null)
             }
         }
 

@@ -128,6 +128,12 @@ jobs:
           test -d "${{ github.workspace }}/vcpkg_installed-${{ matrix.abi }}/${{ matrix.vcpkg-triplet }}/include/openssl"
           test -d "${{ github.workspace }}/vcpkg_installed-${{ matrix.abi }}/${{ matrix.vcpkg-triplet }}/lib"
 
+      - name: Patch stream-server JNI exports for com.moxi.app
+        run: |
+          sed -i 's/Java_com_stremio_mobile_server/Java_com_moxi_app_server/g' stream-server/server/src/jni.rs
+          echo "Patched JNI symbols in stream-server/server/src/jni.rs"
+          grep -n "Java_com_moxi_app_server" stream-server/server/src/jni.rs
+
       - name: Build ${{ matrix.abi }}
         working-directory: stream-server/server
         run: cargo ndk --target ${{ matrix.rust-target }} --platform 24 build --release --features libtorrent --no-default-features
