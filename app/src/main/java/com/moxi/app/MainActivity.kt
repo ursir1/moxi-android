@@ -55,6 +55,29 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        /**
+         * Called by injected JS when the HTML5 video element emits an error
+         * (e.g. codec not supported, streaming server unreachable).
+         * We immediately offer an external player so the user can still watch.
+         */
+        @android.webkit.JavascriptInterface
+        fun onVideoPlaybackFailed(streamUrl: String, errorCode: Int) {
+            Timber.w("Video playback failed in WebView – code=$errorCode url=$streamUrl")
+            if (streamUrl.isBlank()) return
+            runOnUiThread {
+                try {
+                    val cleanUrl = streamUrl.trim()
+                    val videoIntent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(Uri.parse(cleanUrl), "video/*")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(Intent.createChooser(videoIntent, "Stream not supported — open with…"))
+                } catch (e: Exception) {
+                    Timber.e(e, "External player fallback failed for: $streamUrl")
+                }
+            }
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -197,11 +220,13 @@ class MainActivity : ComponentActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                // Inject helper to automatically connect external player buttons to AndroidBridge
+                // ── 1. External-player button bridge + video error fallback ──────────────
                 val js = """
                     (function() {
                         if (window.__moxiInjected) return;
                         window.__moxiInjected = true;
+
+                        // Intercept VLC / m3u8 href clicks
                         document.addEventListener('click', function(e) {
                             var target = e.target;
                             var btn = target.closest('a, button, [role="button"]');
@@ -215,9 +240,73 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }, true);
+
+                        // Auto-detect <video> elements and fall back to external player on error
+                        function attachVideoErrorHandler(video) {
+                            if (video.__moxiErrorHandled) return;
+                            video.__moxiErrorHandled = true;
+                            video.addEventListener('error', function() {
+                                var src = video.src || video.currentSrc || '';
+                                var code = (video.error && video.error.code) ? video.error.code : 0;
+                                if (src && src.length > 4 && window.AndroidBridge && window.AndroidBridge.onVideoPlaybackFailed) {
+                                    window.AndroidBridge.onVideoPlaybackFailed(src, code);
+                                }
+                            });
+                        }
+
+                        // Watch DOM for video elements added dynamically
+                        var videoObserver = new MutationObserver(function(mutations) {
+                            mutations.forEach(function(mutation) {
+                                mutation.addedNodes.forEach(function(node) {
+                                    if (!node || node.nodeType !== 1) return;
+                                    if (node.tagName === 'VIDEO') {
+                                        attachVideoErrorHandler(node);
+                                    } else {
+                                        var vids = node.querySelectorAll ? node.querySelectorAll('video') : [];
+                                        for (var i = 0; i < vids.length; i++) attachVideoErrorHandler(vids[i]);
+                                    }
+                                });
+                            });
+                        });
+                        videoObserver.observe(document.documentElement, { childList: true, subtree: true });
+                        // Also attach to any videos already present
+                        document.querySelectorAll('video').forEach(attachVideoErrorHandler);
                     })();
                 """.trimIndent()
                 view?.evaluateJavascript(js, null)
+
+                // ── 2. Pre-built addon installer (runs once, 4 s after page ready) ──────
+                val addonJs = """
+                    (function() {
+                        if (window.__moxiAddonsScheduled) return;
+                        window.__moxiAddonsScheduled = true;
+                        setTimeout(function() {
+                            try {
+                                var PREBUILT = [
+                                    { id: 'com.nuvio.tmdb.catalogs',  url: 'https://catalog.nuvio.tv/manifest.json' },
+                                    { id: 'community.animestream',    url: 'https://animestream-addon.keypop3750.workers.dev/manifest.json' }
+                                ];
+                                // Reach stremio-core transport through the module registry it registers on window
+                                var transport = window.__stremio_core_transport || (window.stremio && window.stremio.transport);
+                                if (!transport || typeof transport.dispatch !== 'function') return;
+
+                                // Ask the core for current addon list
+                                transport.dispatch({ action: 'Ctx', args: { action: 'SyncLibraryWithAPI' } });
+
+                                PREBUILT.forEach(function(addon) {
+                                    transport.dispatch({
+                                        action: 'Ctx',
+                                        args: {
+                                            action: 'InstallAddon',
+                                            args: { transport_url: addon.url, flags: { protected: false } }
+                                        }
+                                    });
+                                });
+                            } catch(e) { /* silent – will retry on next load */ }
+                        }, 4000);
+                    })();
+                """.trimIndent()
+                view?.evaluateJavascript(addonJs, null)
             }
         }
 
